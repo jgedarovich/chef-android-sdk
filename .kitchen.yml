@@ -8,27 +8,6 @@ provisioner:
 
 platforms:
 
-- name: ubuntu-12.04
-  driver:
-    customize:
-      memory: 384
-    run_list:
-      - recipe[apt]
-
-- name: ubuntu-14.04
-  driver:
-    customize:
-      memory: 384
-    run_list:
-      - recipe[apt]
-
-- name: centos-6.6
-  driver:
-    customize:
-      memory: 512
-    run_list:
-      - recipe[yum]
-
 - name: centos-7.1
   driver:
     customize:
@@ -38,22 +17,6 @@ platforms:
 
 suites:
 
-- name: wip # be prepared to work on https://github.com/gildegoma/chef-android-sdk/issues/14 (maven-android-sdk-deployer)
-  run_list:
-    - recipe[git]
-    - recipe[maven]
-    - recipe[android-sdk]
-  attributes:
-    android-sdk:
-      owner: vagrant
-      group: vagrant
-    components:
-      - build-tools-22.1.0
-      - android-22
-      - sysimg-22
-    java:
-      jdk_version: 7
-
 - name: default
   run_list:
     - recipe[android-sdk]
@@ -61,7 +24,16 @@ suites:
     java:
       jdk_version: 7
     android-sdk:
-      components:
-        - build-tools-22.0.1
-        - android-22
-        - sys-img-armeabi-v7a-android-22
+      packages:
+          platform-tools: "Android SDK Platform-tools, revision 23.0.1"
+          sdk-tools: "Android SDK Tools, revision 24.4"
+          build-tools:
+            - "Android SDK Build-Tools, revision 23.0.1"
+            - "Android SDK Build-Tools, revision 20"
+          platforms:
+            - "SDK Platform Android 6.0, API 23, revision 1"
+            - "SDK Platform Android 5.1.1, API 22, revision 2"
+          extras:
+            - "Google Play APK Expansion Library, revision 3"
+            - "Google Play Billing Library, revision 5"
+

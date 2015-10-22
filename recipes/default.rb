@@ -101,10 +101,38 @@ end
 
 package 'expect'
 
+android_sdk_install_platform_tools node['android-sdk']['packages']['platform-tools'] do
+  android_home android_home
+  android_bin android_bin
+  action :install
+end
+
+if false == true
+
+android_sdk_install_sdk_tools node['android-sdk']['packages']['sdk-tools'] do
+  android_home android_home
+  action :install
+end
+
+android_sdk_install_build_tools node['android-sdk']['packages']['build-tools'] do
+  android_home android_home
+  action :install
+end
+
+android_sdk_install_platform node['android-sdk']['packages']['platforms'] do
+  android_home android_home
+  action :install
+end
+
+
+android_sdk_install_extras node['android-sdk']['packages']['extras'] do
+  android_home android_home
+  action :install
+end
+
 #
 # Install, Update (a.k.a. re-install) Android components
 #
-
 # KISS: use a basic idempotent guard, waiting for https://github.com/gildegoma/chef-android-sdk/issues/12
 unless File.exist?("#{setup_root}/#{node['android-sdk']['name']}/temp")
 
@@ -168,3 +196,5 @@ end
 # Install Maven Android SDK Deployer toolkit to populate local Maven repository
 #
 include_recipe('android-sdk::maven_rescue') if node['android-sdk']['maven_rescue']
+
+end

@@ -32,7 +32,7 @@ def current_installed_build_tools
       raise "properties file is missing one of the required keys" 
     end
     #the below makes it look like what 'android sdk list --all' would spit out
-    installed_build_tools.push("Android SDK Tools, revision "+properties["Pkg.Revision"])
+    installed_build_tools.push("Android SDK Build-tools, revision "+properties["Pkg.Revision"])
   end
   installed_build_tools
 end

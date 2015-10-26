@@ -25,15 +25,13 @@ suites:
       jdk_version: 7
     android-sdk:
       packages:
-          platform-tools: "Android SDK Platform-tools, revision 23.0.1"
-          sdk-tools: "Android SDK Tools, revision 24.4"
-          build-tools:
-            - "Android SDK Build-Tools, revision 23.0.1"
-            - "Android SDK Build-Tools, revision 20"
-          platforms:
-            - "SDK Platform Android 6.0, API 23, revision 1"
-            - "SDK Platform Android 5.1.1, API 22, revision 2"
-          extras:
-            - "Google Play APK Expansion Library, revision 3"
-            - "Google Play Billing Library, revision 5"
+        - "Android SDK Platform-tools, revision 23.0.1"
+        - "Android SDK Tools, revision 24.4"
+        - "Android SDK Build-tools, revision 23.0.1"
+        - "Android SDK Build-tools, revision 20"
+        - "Android SDK Build-tools, revision *"
+        - "SDK Platform Android 6.0, API 23, revision 1"
+        - "SDK Platform Android 5.1.1, API 22, revision 2"
+        - "Google Play APK Expansion Library, revision 3"
+        - "Google Play Billing Library, revision 5"
 

@@ -101,10 +101,12 @@ end
 
 package 'expect'
 
-android_sdk_install_platform_tools node['android-sdk']['packages']['platform-tools'] do
-  android_home android_home
-  android_bin android_bin
-  action :install
+node['android-sdk']['packages'].each do |pattern|
+  android_sdk_install_packages pattern do
+    android_home android_home
+    android_bin android_bin
+    action :install
+  end
 end
 
 if false == true

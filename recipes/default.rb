@@ -109,71 +109,7 @@ node['android-sdk']['packages'].each do |pattern|
   end
 end
 
-if false == true
 
-android_sdk_install_sdk_tools node['android-sdk']['packages']['sdk-tools'] do
-  android_home android_home
-  action :install
-end
-
-android_sdk_install_build_tools node['android-sdk']['packages']['build-tools'] do
-  android_home android_home
-  action :install
-end
-
-android_sdk_install_platform node['android-sdk']['packages']['platforms'] do
-  android_home android_home
-  action :install
-end
-
-
-android_sdk_install_extras node['android-sdk']['packages']['extras'] do
-  android_home android_home
-  action :install
-end
-
-#
-# Install, Update (a.k.a. re-install) Android components
-#
-# KISS: use a basic idempotent guard, waiting for https://github.com/gildegoma/chef-android-sdk/issues/12
-unless File.exist?("#{setup_root}/#{node['android-sdk']['name']}/temp")
-
-  # With "--filter node['android-sdk']['components'].join(,)" pattern,
-  # some system-images were not installed as expected.
-  # The easiest way I could find to fix this problem consists
-  # in executing a dedicated 'android sdk update' command for each component to be installed.
-  node['android-sdk']['components'].each do |sdk_component|
-    script "Install Android SDK component #{sdk_component}" do
-      interpreter 'expect'
-      environment 'ANDROID_HOME' => android_home
-      path [File.join(android_home, 'tools')]
-      user node['android-sdk']['owner']
-      group node['android-sdk']['group']
-      # TODO: use --force or not?
-      code <<-EOF
-        spawn #{android_bin} update sdk --no-ui --all --filter #{sdk_component}
-        set timeout 1800
-        expect {
-          -regexp "Do you accept the license '(#{node['android-sdk']['license']['white_list'].join('|')})'.*" {
-                exp_send "y\r"
-                exp_continue
-          }
-          -regexp "Do you accept the license '(#{node['android-sdk']['license']['black_list'].join('|')})'.*" {
-                exp_send "n\r"
-                exp_continue
-          }
-          "Do you accept the license '*-license-*'*" {
-                exp_send "#{node['android-sdk']['license']['default_answer']}\r"
-                exp_continue
-          }
-          eof
-        }
-      EOF
-    end
-  end
-end
-
-#
 # Deploy additional scripts, preferably outside Android-SDK own directories to
 # avoid unwanted removal when updating android sdk components later.
 #
@@ -199,4 +135,3 @@ end
 #
 include_recipe('android-sdk::maven_rescue') if node['android-sdk']['maven_rescue']
 
-end

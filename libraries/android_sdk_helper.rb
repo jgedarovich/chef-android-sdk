@@ -12,7 +12,7 @@ module AndroidSdkHelper
     if !@@all_packages.empty?
       return @@all_packages
     end
-    puts "      - fetching a list of all available android sdk packages from remote repositories"
+    Chef::Log.info "fetching a list of all available android sdk packages from remote repositories"
     ENV['ANDROID_HOME'] = @new_resource.android_home
     android_bin = @new_resource.android_bin
     package = Hash.new  
@@ -39,14 +39,13 @@ module AndroidSdkHelper
         end  
       end  
     rescue PTY::ChildExited  
-      raise "DED"  
-      puts "The child process exited!"  
+      Chef::Log.error "fetching a list of android packages from the 'android' command failed!"
     end  
     status = $?  
     if status == 0  
-      puts "      - Done fetching a list of all available android sdk packages from remote repositories"
+      Chef::Log.info "Done fetching a list of all available android sdk packages from remote repositories"
     else  
-      raise "      - FAILED fetching a list of all available android sdk packages from remote repositories exit code #{status}!"  
+      raise "FAILED fetching a list of all available android sdk packages from remote repositories exit code #{status}!"
     end  
     @@all_packages
   end
@@ -56,14 +55,20 @@ module AndroidSdkHelper
   def install_packages(pattern, android_home, android_bin)
 
     find_installed_packages() unless @@installed_packages_checked
-
     matches = get_packages().select do |p|
-      #todo move installed check to seprate check, because we want to raise if 0 matches
-      p["Description"] =~ Regexp.new(pattern) && p["Installed"] == false
+      p["Description"] =~ Regexp.new(pattern)
     end
 
     if matches.empty?
-      puts "        - SKIPPING: all android sdk packages that match the parttern '#{pattern}' are already installed"
+      raise  "FAILED: the remote android sdk repository does not have any packages that match the parttern '#{pattern}'"
+    end
+
+    matches.select! do |p|
+      p["Installed"] == false
+    end
+
+    if matches.empty?
+      Chef::Log.info "SKIPPING: all android sdk packages that match the parttern '#{pattern}' are already installed"
       return 0
     end
     
@@ -71,19 +76,19 @@ module AndroidSdkHelper
     matches.each do |match|
       ids.push(match ["id"].split(' ')[0])
     end
-
-    raise if ids.empty?
+    raise "FUCK!" if ids.empty?
 
     ENV['ANDROID_HOME'] = android_home
 
     ids.each do |id|
       begin
         #maybe sudo -u node['android-sdk']['owner']
-        puts "#{android_bin} update sdk --no-ui --all --filter #{id}"
+        Chef::Log.info "#{android_bin} update sdk --no-ui --all --filter #{id}"
         PTY.spawn("#{android_bin} update sdk --no-ui --all --filter #{id} 2>&1") do |stdout, stdin, pid|
           begin
             # Do stuff with the output here. Just printing to show it works
-            stdout.expect(Regexp.new("Do you accept the license *")) do |result|
+            stdout.expect(Regexp.new("Do you accept the license*")) do |result|
+                Chef::Log.info "ACCEPTING LICENCE"
                 stdin.puts("y\n")
             end
             stdout.each do |line| 
@@ -95,17 +100,17 @@ module AndroidSdkHelper
           end
         end
       rescue PTY::ChildExited
-        raise "DED"
-        puts "The child process exited!"
+        raise "The child process being used to update the android sdk exited unexpectedly!"
+
       end
       status = $?
       if status == 0
-          puts "Done!"
+          Chef::Log.info "The child processes being used to update the android sdk is done"
       else
-        raise "Failed with exit code #{status}!"
+        raise "The child processes being used to update the android sdk Failed with exit code #{status}!"
       end
     end
-
+    puts "end: install_packages"
   end
 
   def find_installed_packages
@@ -122,8 +127,7 @@ module AndroidSdkHelper
         .split("/").first
     
       unless  properties.has_key?("Pkg.Revision")
-        #todo: more specific error message
-        raise "properties file is missing one of the required keys" 
+        raise "properties file: '#{properties_file}' is missing one of the required keys: 'Pkg.Revision'" 
       end
 
       package_description = nil
@@ -140,13 +144,11 @@ module AndroidSdkHelper
       elsif android_home_subdir == "platforms"
         unless  properties.has_key?("AndroidVersion.ApiLevel") &&
             properties.has_key?("Pkg.Revision") &&
+            properties.has_key?("Pkg.Desc") &&
             properties.has_key?("Platform.Version")
-          #todo: more specific error message
-          raise "properties file is missing one of the required keys" 
+          raise "properties file: '#{properties_file}' is missing one of the required keys"
         end
-        package_description = "SDK Platform Android " + properties["Platform.Version"] +
-      ", API " + properties["AndroidVersion.ApiLevel"] +
-      ", revision " + properties["Pkg.Revision"]
+        package_description = properties["Pkg.Desc"]
       elsif android_home_subdir == "add-ons"
         package_description = properties['Addon.NameDisplay'] + "," +
             "API " + properties['AndroidVersion.ApiLevel'] + ","+
@@ -154,25 +156,32 @@ module AndroidSdkHelper
       elsif android_home_subdir == "extras"
         unless  properties.has_key?("Pkg.Revision") &&
             properties.has_key?("Extra.NameDisplay")
-          #todo: more specific error message
-          raise "properties file is missing one of the required keys" 
+          raise "properties file: '#{properties_file}' is missing one of the required keys"
         end
         package_description = properties["Extra.NameDisplay"] +
           ", revision "+properties["Pkg.Revision"].gsub(".0.0",'')
+      elsif android_home_subdir == "system-images"
+        unless properties.has_key?("Pkg.Desc") 
+          raise "properties file: '#{properties_file}' is missing one of the required keys"
+        end
+        package_description = properties["Pkg.Desc"]
       else
         raise "UNKNOWN SDK SUBDIR '#{android_home_subdir}' , #{properties_file}"
       end
 
-      #TODO use collect!
-      #todo is there a way to mutate while iterating?, is that a bad idea?
-      indicies = get_packages().each_index.select do |index| 
-        get_packages()[index]["Description"] =~  Regexp.new(package_description) 
+      #mark matching installed packages as installed
+      get_packages().collect! do |p|
+        if p["Description"] =~  Regexp.new(package_description) 
+          p["Installed"] = true 
+        end
+        p
       end
-    
-      #this doesn't account for installed but no longer available
-      indicies.each do |index|
-        get_packages()[index]["Installed"] = true unless index.nil?
-      end
+      #if there was no matches, that means that something was 
+      #installed that is no longer in the remote repo
+      not_fonud = get_packages().select do |p|
+        p["Description"] =~  Regexp.new(package_description) 
+      end.length == 0
+      Chef::Log.warn "package '#{package_description}' is installed but no longer in the remote repository!" if not_fonud
     end
 
   end

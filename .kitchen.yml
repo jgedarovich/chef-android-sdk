@@ -30,8 +30,8 @@ suites:
         - "Android SDK Build-tools, revision 23.0.1"
         - "Android SDK Build-tools, revision 20"
         - "Android SDK Build-tools, revision *"
-        - "SDK Platform Android 6.0, API 23, revision 1"
-        - "SDK Platform Android 5.1.1, API 22, revision 2"
+        - "Android SDK Platform 6.0"
+        - "Android SDK Platform 5.1.1"
         - "Google Play APK Expansion Library, revision 3"
         - "Google Play Billing Library, revision 5"
 
